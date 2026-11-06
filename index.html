@@ -1,0 +1,669 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Teoría de Colas</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 25px;
+    font-family: Arial, sans-serif;
+    background: #101827;
+    color: white;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+header h1 {
+    margin-bottom: 5px;
+    color: #60a5fa;
+}
+
+.panel {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.stat {
+    background: #334155;
+    padding: 18px 10px;
+    text-align: center;
+    border-radius: 10px;
+}
+
+.stat h2 {
+    margin: 0 0 8px;
+    font-size: 28px;
+}
+
+.stat p {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 13px;
+}
+
+.request {
+    text-align: center;
+    padding: 30px 10px;
+}
+
+.request h1 {
+    font-size: 48px;
+    color: #60a5fa;
+    margin: 15px;
+}
+
+.timer {
+    font-size: 36px;
+    font-weight: bold;
+    color: #facc15;
+}
+
+input {
+    width: 150px;
+    padding: 14px;
+    font-size: 22px;
+    text-align: center;
+    border: none;
+    border-radius: 8px;
+    margin: 15px;
+}
+
+button {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 15px;
+    background: #2563eb;
+    color: white;
+    margin: 5px;
+}
+
+button:hover {
+    opacity: .85;
+}
+
+button:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.feedback {
+    min-height: 30px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.success {
+    color: #4ade80;
+}
+
+.error {
+    color: #f87171;
+}
+
+.progress {
+    height: 12px;
+    background: #334155;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 15px;
+}
+
+.progress div {
+    height: 100%;
+    background: #22c55e;
+    width: 0%;
+    transition: width .3s;
+}
+
+.results {
+    display: none;
+}
+
+.results table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.results td, .results th {
+    padding: 12px;
+    border-bottom: 1px solid #475569;
+    text-align: left;
+}
+
+@media(max-width:600px) {
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    body {
+        padding: 12px;
+    }
+
+    .request h1 {
+        font-size: 36px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+    <h1>CENTRO DE ATENCIÓN</h1>
+    <p>Simulación de teoría de filas</p>
+</header>
+
+<div class="panel">
+    <div class="stats">
+
+        <div class="stat">
+            <h2 id="pending">20</h2>
+            <p>Pendientes</p>
+        </div>
+
+        <div class="stat">
+            <h2 id="processed">0</h2>
+            <p>Procesadas</p>
+        </div>
+
+        <div class="stat">
+            <h2 id="correct">0</h2>
+            <p>Aciertos</p>
+        </div>
+
+        <div class="stat">
+            <h2 id="errors">0</h2>
+            <p>Errores</p>
+        </div>
+
+    </div>
+
+    <p>Progreso de atención</p>
+
+    <div class="progress">
+        <div id="progressBar"></div>
+    </div>
+</div>
+
+<div class="panel request">
+
+    <p>SOLICITUD ACTUAL</p>
+
+    <h1 id="name">Esperando...</h1>
+
+    <p>Tiempo restante</p>
+
+    <div class="timer" id="timer">8.0 s</div>
+
+    <p>¿Cuántas vocales tiene esta palabra?</p>
+
+    <input
+        type="number"
+        id="answer"
+        min="0"
+        max="20"
+        placeholder="0"
+        disabled
+    >
+
+    <br>
+
+    <button id="submit" onclick="submitAnswer()" disabled>
+        PROCESAR SOLICITUD
+    </button>
+
+    <p class="feedback" id="feedback"></p>
+
+</div>
+
+<div style="text-align:center">
+    <button onclick="startSimulation()" id="start">
+        INICIAR SIMULACIÓN
+    </button>
+</div>
+
+<div class="panel results" id="results">
+
+    <h2>REPORTE FINAL</h2>
+
+    <table>
+        <tr>
+            <td>Solicitudes generadas</td>
+            <td id="rGenerated">0</td>
+        </tr>
+        <tr>
+            <td>Solicitudes procesadas</td>
+            <td id="rProcessed">0</td>
+        </tr>
+        <tr>
+            <td>Respuestas correctas</td>
+            <td id="rCorrect">0</td>
+        </tr>
+        <tr>
+            <td>Respuestas incorrectas</td>
+            <td id="rErrors">0</td>
+        </tr>
+        <tr>
+            <td>Tiempo promedio</td>
+            <td id="rAverage">0</td>
+        </tr>
+        <tr>
+            <td>Atención más rápida</td>
+            <td id="rFastest">0</td>
+        </tr>
+        <tr>
+            <td>Atención más lenta</td>
+            <td id="rSlowest">0</td>
+        </tr>
+    </table>
+
+    <h3>Historial de atención</h3>
+    <div id="history"></div>
+
+</div>
+
+</div>
+
+<script>
+
+// ====================================
+// CONFIGURACIÓN
+// ====================================
+
+const INITIAL = 20;
+const EXTRA = 5;
+const ERROR_LIMIT = 3;
+const TIME_LIMIT = 8;
+
+const names = [
+  "zapato",        
+  "aurora",        
+  "rey",           
+  "extraordinario", 
+  "rio",            
+  "hipopotamo",    
+  "luz",           
+  "abuelito",      
+  "mesa",           
+  "electrodomestico", 
+  "sol",           
+  "zanahoria",     
+  "cuaderno",      
+  "sal",           
+  "perro",          
+  "escarabajo",    
+  "aeropuerto",     
+  "jardin",         
+  "paralelepipedo",
+  "secundaria",
+  "orquidea",
+  "tren",
+  "computadora",
+  "casa",
+  "ayuntamiento",
+  "mar",
+  "camino",
+  "diccionario",
+  "sol",
+  "teclado",
+  "pelo",
+  "universidad",
+  "luz",
+  "eucalipto",
+  "gato",
+  "murcielago",
+  "ventana",
+  "pan",
+  "helicoptero",
+  "luna",
+  "escuela",
+  "arquitecto",
+  "flor",
+  "mariposa",
+  "libro",
+  "musica",
+  "naturaleza",
+  "estrella",
+  "educacion",
+  "cielo"
+];
+
+// ====================================
+// VARIABLES
+// ====================================
+
+let queue = [];
+let history = [];
+
+let errors = 0;
+let correct = 0;
+let incorrect = 0;
+let generated = 0;
+
+let current = null;
+let startTime = 0;
+let timerInterval = null;
+let nextTimeout = null;
+let active = false;
+let deadline = 0;
+
+// ====================================
+// FUNCIONES
+// ====================================
+
+function countVowels(name) {
+
+    return (name.match(/[AEIOUÁÉÍÓÚÜ]/gi) || []).length;
+
+}
+
+function generateRequests(amount) {
+
+    for(let i = 0; i < amount; i++) {
+
+        queue.push(
+            names[Math.floor(Math.random() * names.length)]
+        );
+
+        generated++;
+
+    }
+
+}
+
+function updateDashboard() {
+
+    document.getElementById("pending").textContent =
+        queue.length + (current ? 1 : 0);
+
+    document.getElementById("processed").textContent =
+        history.length;
+
+    document.getElementById("correct").textContent =
+        correct;
+
+    document.getElementById("errors").textContent =
+        incorrect;
+
+    let progress = generated > 0
+        ? (history.length / generated) * 100
+        : 0;
+
+    document.getElementById("progressBar").style.width =
+        progress + "%";
+
+}
+
+function nextRequest() {
+
+    if(!active) return;
+
+    if(queue.length === 0) {
+
+        finishSimulation();
+        return;
+
+    }
+
+    current = queue.shift();
+
+    startTime = performance.now();
+    deadline = startTime + TIME_LIMIT * 1000;
+
+    document.getElementById("name").textContent = current;
+
+    document.getElementById("answer").value = "";
+    document.getElementById("answer").disabled = false;
+
+    document.getElementById("submit").disabled = false;
+
+    document.getElementById("feedback").textContent = "";
+
+    updateDashboard();
+
+    document.getElementById("answer").focus();
+
+    updateTimer();
+
+}
+
+function updateTimer() {
+
+    if(!active || !current) return;
+
+    let remaining = Math.max(
+        0,
+        (deadline - performance.now()) / 1000
+    );
+
+    document.getElementById("timer").textContent =
+        remaining.toFixed(1) + " s";
+
+    if(remaining <= 0) {
+
+        processAnswer(true);
+        return;
+
+    }
+
+    timerInterval = setTimeout(updateTimer, 50);
+
+}
+
+function submitAnswer() {
+
+    processAnswer(false);
+
+}
+
+function processAnswer(timeout) {
+
+    if(!active || !current) return;
+
+    clearTimeout(timerInterval);
+
+    let elapsed = Math.min(
+        (performance.now() - startTime) / 1000,
+        TIME_LIMIT
+    );
+
+    let expected = countVowels(current);
+
+    let value = Number(
+        document.getElementById("answer").value
+    );
+
+    let isCorrect = !timeout &&
+        document.getElementById("answer").value.trim() !== "" &&
+        Number.isInteger(value) &&
+        value === expected;
+
+    if(isCorrect) {
+
+        correct++;
+
+        document.getElementById("feedback").textContent =
+            "¡Respuesta correcta!";
+
+        document.getElementById("feedback").className =
+            "feedback success";
+
+    } else {
+
+        incorrect++;
+        errors++;
+
+        document.getElementById("feedback").textContent =
+            timeout
+            ? "¡Tiempo agotado!"
+            : "Incorrecto. La respuesta era " + expected;
+
+        document.getElementById("feedback").className =
+            "feedback error";
+
+        if(errors % ERROR_LIMIT === 0) {
+
+            generateRequests(EXTRA);
+
+            document.getElementById("feedback").textContent =
+                "¡PENALIZACIÓN! Se agregaron 10 solicitudes.";
+
+        }
+
+    }
+
+    history.push({
+        name: current,
+        correct: isCorrect,
+        time: elapsed
+    });
+
+    current = null;
+
+    document.getElementById("answer").disabled = true;
+    document.getElementById("submit").disabled = true;
+
+    updateDashboard();
+
+    nextTimeout = setTimeout(nextRequest, 1000);
+
+}
+
+function finishSimulation() {
+
+    active = false;
+
+    clearTimeout(timerInterval);
+    clearTimeout(nextTimeout);
+
+    document.getElementById("name").textContent =
+        "¡COLA TERMINADA!";
+
+    document.getElementById("timer").textContent = "--";
+
+    document.getElementById("answer").disabled = true;
+    document.getElementById("submit").disabled = true;
+
+    const times = history.map(x => x.time);
+
+    const average = times.reduce((a,b) => a+b, 0) / times.length;
+
+    const fastest = history.reduce(
+        (a,b) => a.time < b.time ? a : b
+    );
+
+    const slowest = history.reduce(
+        (a,b) => a.time > b.time ? a : b
+    );
+
+    document.getElementById("rGenerated").textContent = generated;
+    document.getElementById("rProcessed").textContent = history.length;
+    document.getElementById("rCorrect").textContent = correct;
+    document.getElementById("rErrors").textContent = incorrect;
+
+    document.getElementById("rAverage").textContent =
+        average.toFixed(2) + " segundos";
+
+    document.getElementById("rFastest").textContent =
+        fastest.time.toFixed(2) + " s (" + fastest.name + ")";
+
+    document.getElementById("rSlowest").textContent =
+        slowest.time.toFixed(2) + " s (" + slowest.name + ")";
+
+    document.getElementById("history").innerHTML = `
+        <table>
+        <tr>
+            <th>Nombre</th>
+            <th>Resultado</th>
+            <th>Tiempo</th>
+        </tr>
+        ${history.map(x => `
+            <tr>
+                <td>${x.name}</td>
+                <td style="color:${x.correct ? '#4ade80' : '#f87171'}">
+                    ${x.correct ? 'Correcto' : 'Incorrecto'}
+                </td>
+                <td>${x.time.toFixed(2)} s</td>
+            </tr>
+        `).join("")}
+        </table>
+    `;
+
+    document.getElementById("results").style.display = "block";
+
+    updateDashboard();
+
+}
+
+function startSimulation() {
+
+    clearTimeout(timerInterval);
+    clearTimeout(nextTimeout);
+
+    queue = [];
+    history = [];
+
+    errors = 0;
+    correct = 0;
+    incorrect = 0;
+    generated = 0;
+
+    current = null;
+    active = true;
+
+    document.getElementById("results").style.display = "none";
+
+    document.getElementById("start").textContent =
+        "REINICIAR SIMULACIÓN";
+
+    generateRequests(INITIAL);
+
+    updateDashboard();
+
+    nextRequest();
+
+}
+
+// Permitir responder con Enter
+document.getElementById("answer").addEventListener(
+    "keydown",
+    function(event) {
+        if(event.key === "Enter") {
+            submitAnswer();
+        }
+    }
+);
+
+</script>
+
+</body>
+</html>
